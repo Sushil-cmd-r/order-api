@@ -1,6 +1,7 @@
 package application
 
 import (
+	"github.com/sushil-cmd-r/order-api/repository/order"
 	"log"
 	"net/http"
 
@@ -8,30 +9,33 @@ import (
 	"github.com/sushil-cmd-r/order-api/handler"
 )
 
-func loadRoutes() *mux.Router {
-  router := mux.NewRouter()
-  router.Use(loggingMiddleware)
+func (a *App) loadRoutes() {
+	router := mux.NewRouter()
+	router.Use(loggingMiddleware)
 
+	// Order routes
+	orderRoute := router.PathPrefix("/orders").Subrouter()
+	a.registerOrderRoutes(orderRoute)
 
-  // Order routes
-  orderRoute := router.PathPrefix("/orders").Subrouter()
-  registerOrderRoutes(orderRoute)
+	router.HandleFunc("/", func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	})
 
-  router.HandleFunc("/", func(w http.ResponseWriter, _ *http.Request){
-    w.WriteHeader(http.StatusOK)
-  })
-
-  return router
+	a.router = router
 }
 
-func registerOrderRoutes(router *mux.Router) {
-  orderHandler := &handler.Order{}
+func (a *App) registerOrderRoutes(router *mux.Router) {
+	orderHandler := &handler.Order{
+		Repo: &order.RedisRepo{
+			Client: a.rdb,
+		},
+	}
 
-  router.HandleFunc("/", orderHandler.Create).Methods(http.MethodPost)
-  router.HandleFunc("/", orderHandler.List).Methods(http.MethodGet)
-  router.HandleFunc("/{id}", orderHandler.GetById).Methods(http.MethodGet)
-  router.HandleFunc("/{id}", orderHandler.UpdateById).Methods(http.MethodPut)
-  router.HandleFunc("/{id}", orderHandler.DeleteById).Methods(http.MethodDelete)
+	router.HandleFunc("/", orderHandler.Create).Methods(http.MethodPost)
+	router.HandleFunc("/", orderHandler.List).Methods(http.MethodGet)
+	router.HandleFunc("/{id}", orderHandler.GetById).Methods(http.MethodGet)
+	router.HandleFunc("/{id}", orderHandler.UpdateById).Methods(http.MethodPut)
+	router.HandleFunc("/{id}", orderHandler.DeleteById).Methods(http.MethodDelete)
 }
 
 func loggingMiddleware(next http.Handler) http.Handler {
@@ -40,5 +44,3 @@ func loggingMiddleware(next http.Handler) http.Handler {
 		next.ServeHTTP(w, r)
 	})
 }
-
-
