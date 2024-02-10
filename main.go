@@ -1,37 +1,17 @@
 package main
 
 import (
+	"context"
 	"fmt"
-	"log"
-	"net/http"
 
-	"github.com/gorilla/mux"
+	"github.com/sushil-cmd-r/order-api/application"
 )
 
 func main() {
-	router := mux.NewRouter()
-	router.HandleFunc("/hello", basicHandler).Methods(http.MethodGet)
+	app := application.NewApp()
 
-	router.Use(loggingMiddleware)
-
-	server := &http.Server{
-		Addr:    ":8080",
-		Handler: router,
-	}
-
-	err := server.ListenAndServe()
+	err := app.Start(context.TODO())
 	if err != nil {
-		fmt.Println(err)
+		fmt.Println("failed to start app: ", err)
 	}
-}
-
-func basicHandler(w http.ResponseWriter, _ *http.Request) {
-	w.Write([]byte("Hello World\n"))
-}
-
-func loggingMiddleware(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		log.Printf("%s %q from %s\n", r.Method, r.RequestURI, r.RemoteAddr)
-		next.ServeHTTP(w, r)
-	})
 }
