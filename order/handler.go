@@ -1,27 +1,40 @@
-package handler
+package order
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"github.com/google/uuid"
 	"github.com/gorilla/mux"
-	"github.com/sushil-cmd-r/order-api/model"
-	"github.com/sushil-cmd-r/order-api/repository/order"
 	"math/rand"
 	"net/http"
 	"strconv"
 	"time"
 )
 
-type Order struct {
-	Repo *order.RedisRepo
+type Repo interface {
+	Insert(context.Context, Order) error
+	FindByID(context.Context, uint64) (Order, error)
+	DeleteById(context.Context, uint64) error
+	Update(context.Context, Order) error
+	FindAll(context.Context, FindAllPage) (FindResult, error)
 }
 
-func (o *Order) Create(w http.ResponseWriter, r *http.Request) {
+type Handler struct {
+	Repo Repo
+}
+
+func NewHandler(repo Repo) *Handler {
+	return &Handler{
+		Repo: repo,
+	}
+}
+
+func (o *Handler) Create(w http.ResponseWriter, r *http.Request) {
 	var body struct {
-		CustomerID uuid.UUID        `json:"customer_id"`
-		LineItems  []model.LineItem `json:"line_items"`
+		CustomerID uuid.UUID  `json:"customer_id"`
+		LineItems  []LineItem `json:"line_items"`
 	}
 
 	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
@@ -30,7 +43,7 @@ func (o *Order) Create(w http.ResponseWriter, r *http.Request) {
 	}
 
 	now := time.Now().UTC()
-	ord := model.Order{
+	ord := Order{
 		OrderID:    rand.Uint64(),
 		CustomerID: body.CustomerID,
 		LineItems:  body.LineItems,
@@ -56,7 +69,7 @@ func (o *Order) Create(w http.ResponseWriter, r *http.Request) {
 	_, _ = w.Write(res)
 }
 
-func (o *Order) List(w http.ResponseWriter, r *http.Request) {
+func (o *Handler) List(w http.ResponseWriter, r *http.Request) {
 	cursorStr := r.URL.Query().Get("cursor")
 	if cursorStr == "" {
 		cursorStr = "0"
@@ -71,7 +84,7 @@ func (o *Order) List(w http.ResponseWriter, r *http.Request) {
 	}
 
 	const size = 50
-	res, err := o.Repo.FindAll(r.Context(), order.FindAllPage{
+	res, err := o.Repo.FindAll(r.Context(), FindAllPage{
 		Offset: cursor,
 		Size:   size,
 	})
@@ -82,8 +95,8 @@ func (o *Order) List(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var response struct {
-		Items []model.Order `json:"items"`
-		Next  uint64        `json:"next,omitempty"`
+		Items []Order `json:"items"`
+		Next  uint64  `json:"next,omitempty"`
 	}
 
 	response.Items = res.Orders
@@ -101,7 +114,7 @@ func (o *Order) List(w http.ResponseWriter, r *http.Request) {
 	_, _ = w.Write(data)
 }
 
-func (o *Order) GetById(w http.ResponseWriter, r *http.Request) {
+func (o *Handler) GetById(w http.ResponseWriter, r *http.Request) {
 	idParam := mux.Vars(r)["id"]
 
 	const base = 10
@@ -112,7 +125,7 @@ func (o *Order) GetById(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	ord, err := o.Repo.FindByID(r.Context(), orderID)
-	if errors.Is(err, order.ErrNotExist) {
+	if errors.Is(err, ErrNotExist) {
 		w.WriteHeader(http.StatusNotFound)
 		return
 	} else if err != nil {
@@ -129,7 +142,7 @@ func (o *Order) GetById(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (o *Order) UpdateById(w http.ResponseWriter, r *http.Request) {
+func (o *Handler) UpdateById(w http.ResponseWriter, r *http.Request) {
 	var body struct {
 		Status string `json:"status"`
 	}
@@ -149,7 +162,7 @@ func (o *Order) UpdateById(w http.ResponseWriter, r *http.Request) {
 	}
 
 	ord, err := o.Repo.FindByID(r.Context(), orderID)
-	if errors.Is(err, order.ErrNotExist) {
+	if errors.Is(err, ErrNotExist) {
 		w.WriteHeader(http.StatusNotFound)
 		return
 	} else if err != nil {
@@ -197,7 +210,7 @@ func (o *Order) UpdateById(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (o *Order) DeleteById(w http.ResponseWriter, r *http.Request) {
+func (o *Handler) DeleteById(w http.ResponseWriter, r *http.Request) {
 	idParam := mux.Vars(r)["id"]
 
 	const base = 10
@@ -208,7 +221,7 @@ func (o *Order) DeleteById(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	err = o.Repo.DeleteById(r.Context(), orderID)
-	if errors.Is(err, order.ErrNotExist) {
+	if errors.Is(err, ErrNotExist) {
 		w.WriteHeader(http.StatusNotFound)
 		return
 	} else if err != nil {

@@ -1,12 +1,11 @@
 package application
 
 import (
-	"github.com/sushil-cmd-r/order-api/repository/order"
+	"github.com/sushil-cmd-r/order-api/order"
 	"log"
 	"net/http"
 
 	"github.com/gorilla/mux"
-	"github.com/sushil-cmd-r/order-api/handler"
 )
 
 func (a *App) loadRoutes() {
@@ -25,11 +24,7 @@ func (a *App) loadRoutes() {
 }
 
 func (a *App) registerOrderRoutes(router *mux.Router) {
-	orderHandler := &handler.Order{
-		Repo: &order.RedisRepo{
-			Client: a.rdb,
-		},
-	}
+	orderHandler := order.NewHandler(order.NewRedisRepo(a.rdb))
 
 	router.HandleFunc("/", orderHandler.Create).Methods(http.MethodPost)
 	router.HandleFunc("/", orderHandler.List).Methods(http.MethodGet)

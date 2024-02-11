@@ -6,18 +6,23 @@ import (
 	"errors"
 	"fmt"
 	"github.com/redis/go-redis/v9"
-	"github.com/sushil-cmd-r/order-api/model"
 )
 
 type RedisRepo struct {
 	Client *redis.Client
 }
 
+func NewRedisRepo(client *redis.Client) *RedisRepo {
+	return &RedisRepo{
+		Client: client,
+	}
+}
+
 func orderIDKey(id uint64) string {
 	return fmt.Sprintf("order:%d", id)
 }
 
-func (r *RedisRepo) Insert(ctx context.Context, order model.Order) error {
+func (r *RedisRepo) Insert(ctx context.Context, order Order) error {
 	data, err := json.Marshal(order)
 	if err != nil {
 		return fmt.Errorf("failed to encode order: %w", err)
@@ -47,20 +52,20 @@ func (r *RedisRepo) Insert(ctx context.Context, order model.Order) error {
 
 var ErrNotExist = errors.New("order does not exist")
 
-func (r *RedisRepo) FindByID(ctx context.Context, id uint64) (model.Order, error) {
+func (r *RedisRepo) FindByID(ctx context.Context, id uint64) (Order, error) {
 	key := orderIDKey(id)
 
 	value, err := r.Client.Get(ctx, key).Result()
 	if errors.Is(err, redis.Nil) {
-		return model.Order{}, ErrNotExist
+		return Order{}, ErrNotExist
 	} else if err != nil {
-		return model.Order{}, fmt.Errorf("get order: %w", err)
+		return Order{}, fmt.Errorf("get order: %w", err)
 	}
 
-	var order model.Order
+	var order Order
 	err = json.Unmarshal([]byte(value), &order)
 	if err != nil {
-		return model.Order{}, fmt.Errorf("failed to decode order: %w", err)
+		return Order{}, fmt.Errorf("failed to decode order: %w", err)
 	}
 
 	return order, nil
@@ -92,7 +97,7 @@ func (r *RedisRepo) DeleteById(ctx context.Context, id uint64) error {
 	return nil
 }
 
-func (r *RedisRepo) Update(ctx context.Context, order model.Order) error {
+func (r *RedisRepo) Update(ctx context.Context, order Order) error {
 	data, err := json.Marshal(order)
 	if err != nil {
 		return fmt.Errorf("failed to encode error: %w", err)
@@ -116,7 +121,7 @@ type FindAllPage struct {
 }
 
 type FindResult struct {
-	Orders []model.Order
+	Orders []Order
 	Cursor uint64
 }
 
@@ -130,7 +135,7 @@ func (r *RedisRepo) FindAll(ctx context.Context, page FindAllPage) (FindResult, 
 
 	if len(keys) == 0 {
 		return FindResult{
-			Orders: []model.Order{},
+			Orders: []Order{},
 		}, nil
 	}
 
@@ -139,11 +144,11 @@ func (r *RedisRepo) FindAll(ctx context.Context, page FindAllPage) (FindResult, 
 		return FindResult{}, fmt.Errorf("failed to get orders: %w", err)
 	}
 
-	orders := make([]model.Order, len(xs))
+	orders := make([]Order, len(xs))
 
 	for i, x := range xs {
 		x := x.(string)
-		var order model.Order
+		var order Order
 
 		err = json.Unmarshal([]byte(x), &order)
 		if err != nil {
