@@ -16,15 +16,11 @@ func (a *App) loadRoutes() {
 	orderRoute := router.PathPrefix("/orders").Subrouter()
 	a.registerOrderRoutes(orderRoute)
 
-	router.HandleFunc("/", func(w http.ResponseWriter, _ *http.Request) {
-		w.WriteHeader(http.StatusOK)
-	})
-
 	a.router = router
 }
 
 func (a *App) registerOrderRoutes(router *mux.Router) {
-	orderHandler := order.NewHandler(order.NewRedisRepo(a.rdb))
+	orderHandler := order.NewHandler(order.NewRedisRepo(a.db))
 
 	router.HandleFunc("/", orderHandler.Create).Methods(http.MethodPost)
 	router.HandleFunc("/", orderHandler.List).Methods(http.MethodGet)

@@ -6,15 +6,24 @@ import (
 	"errors"
 	"fmt"
 	"github.com/redis/go-redis/v9"
+	"github.com/sushil-cmd-r/order-api/db"
+	"os"
 )
 
 type RedisRepo struct {
 	Client *redis.Client
 }
 
-func NewRedisRepo(client *redis.Client) *RedisRepo {
+func NewRedisRepo(rdb db.Database) *RedisRepo {
+	client, ok := rdb.(*db.RedisDB)
+	if !ok {
+		// should be unreachable
+		fmt.Println("unable to cast database")
+		os.Exit(1)
+	}
+
 	return &RedisRepo{
-		Client: client,
+		Client: client.GetDB(),
 	}
 }
 
