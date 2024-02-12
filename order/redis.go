@@ -18,7 +18,7 @@ func NewRedisRepo(client *redis.Client) *RedisRepo {
 	}
 }
 
-func orderIDKey(id uint64) string {
+func orderIDKey(id string) string {
 	return fmt.Sprintf("order:%d", id)
 }
 
@@ -52,7 +52,7 @@ func (r *RedisRepo) Insert(ctx context.Context, order Order) error {
 
 var ErrNotExist = errors.New("order does not exist")
 
-func (r *RedisRepo) FindByID(ctx context.Context, id uint64) (Order, error) {
+func (r *RedisRepo) FindByID(ctx context.Context, id string) (Order, error) {
 	key := orderIDKey(id)
 
 	value, err := r.Client.Get(ctx, key).Result()
@@ -71,7 +71,7 @@ func (r *RedisRepo) FindByID(ctx context.Context, id uint64) (Order, error) {
 	return order, nil
 }
 
-func (r *RedisRepo) DeleteById(ctx context.Context, id uint64) error {
+func (r *RedisRepo) DeleteById(ctx context.Context, id string) error {
 	key := orderIDKey(id)
 
 	txn := r.Client.TxPipeline()

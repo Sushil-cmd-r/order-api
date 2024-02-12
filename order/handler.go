@@ -15,8 +15,8 @@ import (
 
 type Repo interface {
 	Insert(context.Context, Order) error
-	FindByID(context.Context, uint64) (Order, error)
-	DeleteById(context.Context, uint64) error
+	FindByID(context.Context, string) (Order, error)
+	DeleteById(context.Context, string) error
 	Update(context.Context, Order) error
 	FindAll(context.Context, FindAllPage) (FindResult, error)
 }
@@ -44,7 +44,7 @@ func (o *Handler) Create(w http.ResponseWriter, r *http.Request) {
 
 	now := time.Now().UTC()
 	ord := Order{
-		OrderID:    rand.Uint64(),
+		OrderID:    strconv.FormatUint(rand.Uint64(), 10),
 		CustomerID: body.CustomerID,
 		LineItems:  body.LineItems,
 		CreatedAt:  &now,
@@ -117,14 +117,7 @@ func (o *Handler) List(w http.ResponseWriter, r *http.Request) {
 func (o *Handler) GetById(w http.ResponseWriter, r *http.Request) {
 	idParam := mux.Vars(r)["id"]
 
-	const base = 10
-	const bitSize = 64
-	orderID, err := strconv.ParseUint(idParam, base, bitSize)
-	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-		return
-	}
-	ord, err := o.Repo.FindByID(r.Context(), orderID)
+	ord, err := o.Repo.FindByID(r.Context(), idParam)
 	if errors.Is(err, ErrNotExist) {
 		w.WriteHeader(http.StatusNotFound)
 		return
@@ -153,15 +146,8 @@ func (o *Handler) UpdateById(w http.ResponseWriter, r *http.Request) {
 	}
 
 	idParam := mux.Vars(r)["id"]
-	const base = 10
-	const bitSize = 64
-	orderID, err := strconv.ParseUint(idParam, base, bitSize)
-	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-		return
-	}
 
-	ord, err := o.Repo.FindByID(r.Context(), orderID)
+	ord, err := o.Repo.FindByID(r.Context(), idParam)
 	if errors.Is(err, ErrNotExist) {
 		w.WriteHeader(http.StatusNotFound)
 		return
@@ -213,14 +199,7 @@ func (o *Handler) UpdateById(w http.ResponseWriter, r *http.Request) {
 func (o *Handler) DeleteById(w http.ResponseWriter, r *http.Request) {
 	idParam := mux.Vars(r)["id"]
 
-	const base = 10
-	const bitSize = 64
-	orderID, err := strconv.ParseUint(idParam, base, bitSize)
-	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-		return
-	}
-	err = o.Repo.DeleteById(r.Context(), orderID)
+	err := o.Repo.DeleteById(r.Context(), idParam)
 	if errors.Is(err, ErrNotExist) {
 		w.WriteHeader(http.StatusNotFound)
 		return
