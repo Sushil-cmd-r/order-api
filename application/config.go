@@ -7,8 +7,9 @@ import (
 )
 
 type Config struct {
-	RedisAddr  string
-	ServerPort uint16
+	PostgresAddr string
+	RedisAddr    string
+	ServerPort   uint16
 }
 
 func LoadConfig() Config {
@@ -21,6 +22,10 @@ func LoadConfig() Config {
 
 	if redisAddr, exists := os.LookupEnv("REDIS_ADDR"); exists {
 		cfg.RedisAddr = redisAddr
+	}
+
+	if postgresAddr, exists := os.LookupEnv("POSTGRES_ADDR"); exists {
+		cfg.PostgresAddr = postgresAddr
 	}
 
 	if sPort, exists := os.LookupEnv("PORT"); exists {

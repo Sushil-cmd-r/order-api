@@ -11,7 +11,7 @@ import (
 
 func main() {
 	config := application.LoadConfig()
-	database := db.NewRedisDB(config.RedisAddr)
+	database := db.NewPostgresDb(config.PostgresAddr)
 
 	app := application.NewApp(config, database)
 
