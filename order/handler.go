@@ -83,7 +83,7 @@ func (o *Handler) List(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	const size = 50
+	const size = 5
 	res, err := o.Repo.FindAll(r.Context(), FindAllPage{
 		Offset: cursor,
 		Size:   size,

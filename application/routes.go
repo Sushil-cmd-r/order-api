@@ -20,7 +20,7 @@ func (a *App) loadRoutes() {
 }
 
 func (a *App) registerOrderRoutes(router *mux.Router) {
-	orderHandler := order.NewHandler(order.NewRedisRepo(a.db))
+	orderHandler := order.NewHandler(order.NewPostgresRepo(a.db))
 
 	router.HandleFunc("/", orderHandler.Create).Methods(http.MethodPost)
 	router.HandleFunc("/", orderHandler.List).Methods(http.MethodGet)
